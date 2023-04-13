@@ -1,0 +1,34 @@
+import numpy as np
+import pandas as pd
+import implicit
+
+# Load the data
+data = pd.read_csv('data.csv')
+
+# Create a mapping from string IDs to integer IDs
+user_id_map = {id:i for i,id in enumerate(data['user_id'].unique())}
+item_id_map = {id:i for i,id in enumerate(data['item_id'].unique())}
+
+# Convert the string IDs to integer IDs
+data['user_id'] = data['user_id'].apply(lambda x: user_id_map[x])
+data['item_id'] = data['item_id'].apply(lambda x: item_id_map[x])
+
+# Create a sparse matrix of user-item interactions
+sparse_data = sparse.csr_matrix((data['rating'].astype(float), (data['user_id'], data['item_id'])))
+
+# Initialize the ALS model and fit it using the sparse data
+model = implicit.als.AlternatingLeastSquares(factors=50, regularization=0.1, iterations=50)
+model.fit(sparse_data)
+
+# Get the recommended items for a user
+user_id = 'user123'
+user_items = data[data['user_id'] == user_id_map[user_id]]['item_id']
+recommendations = model.recommend(user_id_map[user_id], sparse_data, N=10, filter_already_liked_items=True, recalculate_user=True)
+
+# Convert the integer item IDs back to string IDs
+item_id_map_inv = {i:id for id,i in item_id_map.items()}
+recommendations = [(item_id_map_inv[item_id], score) for item_id, score in recommendations]
+
+# Print the recommended items
+for item in recommendations:
+    print(item)
